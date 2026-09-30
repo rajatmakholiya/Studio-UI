@@ -28,8 +28,8 @@ const CSV_COLUMNS: (CsvColumn<WriterStats> & { sendBack?: boolean })[] = [
   { header: "Send-Back Rate (%)", value: (r) => csvNum(r.sendBackRate), sendBack: true },
   { header: "Median TAT (h)", value: (r) => csvHours(r.medianTatHours) },
   { header: "Avg TAT (h)", value: (r) => csvHours(r.avgTatHours) },
-  { header: "Per Active Day", value: (r) => csvNum(r.perActiveDay, 2) },
-  { header: "Active Days", value: (r) => r.activeDays },
+  { header: "Days Worked", value: (r) => r.activeDays },
+  { header: "Avg Submitted per Day Worked", value: (r) => csvNum(r.perActiveDay, 2) },
   { header: "In Queue", value: (r) => r.pending },
 ];
 
@@ -58,7 +58,8 @@ export default function WritersTable({
         <div>
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Writers</h2>
           <p className="text-[11px] text-gray-400 dark:text-gray-500">
-            Per Day counts only days they actually submitted, so time off does not drag the rate down.
+            Days Worked is the number of days in the range each writer actually submitted on, and Avg / Day
+            divides by it — someone who worked 5 days of a 7-day range is averaged over 5.
             Names are resolved within a division, so &quot;Khosalu&quot; and &quot;Khosalu Puro&quot; count as one person.
           </p>
         </div>
@@ -70,7 +71,7 @@ export default function WritersTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className={`w-full ${showSendBacks ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
+        <table className={`w-full ${showSendBacks ? "min-w-[1120px]" : "min-w-[980px]"} text-xs`}>
           <thead className="text-gray-400 dark:text-gray-500">
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <SortableTh label="Writer" colKey="writer" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -86,7 +87,8 @@ export default function WritersTable({
               )}
               <SortableTh label="Med TAT" colKey="medianTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="Avg TAT" colKey="avgTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortableTh label="Per Day" colKey="perActiveDay" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortableTh label="Days Worked" colKey="activeDays" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortableTh label="Avg / Day" colKey="perActiveDay" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="In Queue" colKey="pending" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
@@ -114,16 +116,14 @@ export default function WritersTable({
                 )}
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtHours(r.medianTatHours)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtHours(r.avgTatHours)}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                  {fmtDec(r.perActiveDay, 2)}
-                  <span className="block text-[10px] text-gray-400">over {r.activeDays}d</span>
-                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtInt(r.activeDays)}</td>
+                <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-900 dark:text-white">{fmtDec(r.perActiveDay, 2)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtInt(r.pending)}</td>
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={showSendBacks ? 11 : 9} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={showSendBacks ? 12 : 10} className="px-3 py-8 text-center text-gray-400">
                   No writer activity in this period
                 </td>
               </tr>

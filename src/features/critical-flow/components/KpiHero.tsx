@@ -156,10 +156,14 @@ export default function KpiHero({
         sub="not yet published"
       />
       <Cell
-        label="Per Writer / Day"
+        label="Per Writer / Day Worked"
         value={fmtDec(overview.perWriterPerDay, 2)}
         delta={d.perWriterPerDay}
-        sub={`${fmtInt(overview.activeWriters)} writers active`}
+        sub={
+          overview.writerDaysWorked != null
+            ? `${fmtInt(overview.activeWriters)} writers · ${fmtInt(overview.writerDaysWorked)} days worked`
+            : `${fmtInt(overview.activeWriters)} writers active`
+        }
       />
     </div>
   );

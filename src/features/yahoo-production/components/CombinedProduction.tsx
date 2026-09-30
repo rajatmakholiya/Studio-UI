@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import type { CombinedProductionResult, ProductionSplit } from "../types";
-import { fmtDay, fmtInt } from "@/features/critical-flow/format";
+import { fmtDay, fmtDec, fmtInt } from "@/features/critical-flow/format";
 import { useTableSort, SortableTh } from "@/components/ui/SortableTable";
 import ExportCsvButton from "@/components/ui/ExportCsvButton";
 import type { CsvColumn } from "@/lib/csv";
@@ -27,9 +27,38 @@ interface TableSpec<T> {
   /** Leading text columns: [sort key, header, cell, csv value]. */
   lead: { key: string; label: string; cell: (r: T) => ReactNode; value: (r: T) => string | number }[];
   groups: SplitGroup<T>[];
-  /** An extra trailing numeric column (writers' sent-backs). */
-  extra?: { key: string; label: string; value: (r: T) => number };
+  /** Trailing numeric columns after the splits (sent-backs, days worked, average). */
+  extras?: Extra<T>[];
   maxHeight?: string;
+}
+
+interface Extra<T> {
+  key: string;
+  label: string;
+  value: (r: T) => number | null;
+  /** Decimal places; whole numbers by default. */
+  dp?: number;
+  /** The totals-row cell; blank when omitted. */
+  footer?: (rows: T[]) => number | null;
+}
+
+const fmtExtra = (v: number | null | undefined, dp = 0) => (v == null ? "—" : dp ? fmtDec(v, dp) : fmtInt(v));
+
+/**
+ * The team's average per day worked, for a table's totals row: everyone's
+ * output over everyone's days worked. The "no one recorded" row has no days,
+ * so its pieces stay out of both sides.
+ */
+function avgPerDayWorked<T>(rows: T[], total: (r: T) => number, days: (r: T) => number | null): number | null {
+  let pieces = 0;
+  let worked = 0;
+  for (const r of rows) {
+    const d = days(r);
+    if (d == null) continue;
+    pieces += total(r);
+    worked += d;
+  }
+  return worked > 0 ? pieces / worked : null;
 }
 
 const PART_LABEL: Record<keyof ProductionSplit, string> = {
@@ -40,17 +69,19 @@ const PART_LABEL: Record<keyof ProductionSplit, string> = {
 const PARTS: (keyof ProductionSplit)[] = ["yahoo", "nonYahoo", "total"];
 
 function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
-  const { lead, groups, extra } = spec;
+  const { lead, groups } = spec;
+  const extras = useMemo(() => spec.extras ?? [], [spec.extras]);
   const getValue = useCallback(
     (r: T, key: string) => {
       const l = lead.find((c) => c.key === key);
       if (l) return l.value(r);
-      if (extra && key === extra.key) return extra.value(r);
+      const x = extras.find((c) => c.key === key);
+      if (x) return x.value(r);
       const [g, part] = key.split(".");
       const group = groups.find((x) => x.key === g);
       return group ? group.get(r)[part as keyof ProductionSplit] : null;
     },
-    [lead, groups, extra],
+    [lead, groups, extras],
   );
   const { sorted, sortKey, sortDir, handleSort } = useTableSort(spec.rows, getValue);
 
@@ -62,7 +93,7 @@ function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
         value: (r: T) => g.get(r)[part],
       })),
     ),
-    ...(extra ? [{ header: extra.label, value: extra.value }] : []),
+    ...extras.map((x) => ({ header: x.label, value: (r: T) => x.value(r) ?? "" })),
   ];
 
   const total = (g: SplitGroup<T>, part: keyof ProductionSplit) =>
@@ -88,7 +119,7 @@ function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
                     {g.label}
                   </th>
                 ))}
-                {extra && <th />}
+                {extras.map((x) => <th key={x.key} />)}
               </tr>
             )}
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -108,9 +139,9 @@ function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
                   />
                 )),
               )}
-              {extra && (
-                <SortableTh label={extra.label} colKey={extra.key} align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              )}
+              {extras.map((x) => (
+                <SortableTh key={x.key} label={x.label} colKey={x.key} align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -131,14 +162,16 @@ function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
                     </td>
                   )),
                 )}
-                {extra && (
-                  <td className="px-3 py-1.5 text-right tabular-nums text-gray-600 dark:text-gray-400">{fmtInt(extra.value(r))}</td>
-                )}
+                {extras.map((x) => (
+                  <td key={x.key} className="px-3 py-1.5 text-right tabular-nums text-gray-600 dark:text-gray-400">
+                    {fmtExtra(x.value(r), x.dp)}
+                  </td>
+                ))}
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={lead.length + groups.length * 3 + (extra ? 1 : 0)} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={lead.length + groups.length * 3 + extras.length} className="px-3 py-8 text-center text-gray-400">
                   Nothing in this range
                 </td>
               </tr>
@@ -153,11 +186,11 @@ function SplitTable<T>({ spec }: { spec: TableSpec<T> }) {
                     <td key={`${g.key}.${part}`} className="px-3 py-1.5 text-right tabular-nums">{fmtInt(total(g, part))}</td>
                   )),
                 )}
-                {extra && (
-                  <td className="px-3 py-1.5 text-right tabular-nums">
-                    {fmtInt(spec.rows.reduce((s, r) => s + extra.value(r), 0))}
+                {extras.map((x) => (
+                  <td key={x.key} className="px-3 py-1.5 text-right tabular-nums">
+                    {x.footer ? fmtExtra(x.footer(spec.rows), x.dp) : ""}
                   </td>
-                )}
+                ))}
               </tr>
             </tfoot>
           )}
@@ -225,7 +258,7 @@ export default function CombinedProduction({ data, isLoading }: Props) {
   };
   const writerSpec: TableSpec<Writer> = {
     title: "Writer production",
-    subtitle: "Pieces submitted in the range, by the day they were submitted",
+    subtitle: "Pieces submitted in the range, by the day they were submitted. Avg / Day divides by the days each writer actually worked, not the length of the range.",
     csv: "writers",
     rows: data.writers,
     lead: [
@@ -233,11 +266,21 @@ export default function CombinedProduction({ data, isLoading }: Props) {
       { key: "division", label: "Division", cell: (r) => r.division || "—", value: (r) => r.division },
     ],
     groups: [{ key: "submitted", label: "Submitted", get: (r) => r.submitted }],
-    extra: { key: "sentBack", label: "Sent back", value: (r) => r.sentBack },
+    extras: [
+      { key: "sentBack", label: "Sent back", value: (r) => r.sentBack, footer: (rs) => rs.reduce((n, r) => n + r.sentBack, 0) },
+      { key: "daysWorked", label: "Days Worked", value: (r) => r.daysWorked },
+      {
+        key: "perDay",
+        label: "Avg / Day",
+        value: (r) => r.perDay,
+        dp: 2,
+        footer: (rs) => avgPerDayWorked(rs, (r) => r.submitted.total, (r) => r.daysWorked),
+      },
+    ],
   };
   const editorSpec: TableSpec<Editor> = {
     title: "Editor production",
-    subtitle: "Pieces published in the range; for Yahoo, the newsroom editor who published it",
+    subtitle: "Pieces published in the range; for Yahoo, the newsroom editor who published it. Avg / Day divides by the days each editor actually worked.",
     csv: "editors",
     rows: data.editors,
     lead: [
@@ -245,6 +288,16 @@ export default function CombinedProduction({ data, isLoading }: Props) {
       { key: "division", label: "Division", cell: (r) => r.division || "—", value: (r) => r.division },
     ],
     groups: [{ key: "published", label: "Published", get: (r) => r.published }],
+    extras: [
+      { key: "daysWorked", label: "Days Worked", value: (r) => r.daysWorked },
+      {
+        key: "perDay",
+        label: "Avg / Day",
+        value: (r) => r.perDay,
+        dp: 2,
+        footer: (rs) => avgPerDayWorked(rs, (r) => r.published.total, (r) => r.daysWorked),
+      },
+    ],
   };
 
   return (

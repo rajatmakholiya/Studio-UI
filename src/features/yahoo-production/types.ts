@@ -41,8 +41,25 @@ export interface CombinedProductionResult {
   endDate: string | null;
   totals: { submitted: ProductionSplit; published: ProductionSplit };
   days: { date: string; published: ProductionSplit }[];
-  writers: { writer: string; division: string; submitted: ProductionSplit; sentBack: number }[];
-  editors: { editor: string; division: string; published: ProductionSplit }[];
+  writers: {
+    writer: string;
+    division: string;
+    submitted: ProductionSplit;
+    sentBack: number;
+    /** Days in the range they submitted on; null for the "No writer recorded" row. */
+    daysWorked: number | null;
+    /** Submitted per day worked. */
+    perDay: number | null;
+  }[];
+  editors: {
+    editor: string;
+    division: string;
+    published: ProductionSplit;
+    /** Days in the range they cleared a counted piece on; null for the "No editor recorded" row. */
+    daysWorked: number | null;
+    /** Published per day worked. */
+    perDay: number | null;
+  }[];
   divisions: { division: string; submitted: ProductionSplit; published: ProductionSplit }[];
   notes: { sharedWithYahoo: number; undated: number };
 }

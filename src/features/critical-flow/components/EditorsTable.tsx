@@ -28,8 +28,8 @@ const CSV_COLUMNS: (CsvColumn<EditorStats> & { sendBack?: boolean })[] = [
   { header: "2nd Pass", value: (r) => r.secondPass, sendBack: true },
   { header: "Median Review (h)", value: (r) => csvHours(r.medianReviewHours) },
   { header: "Avg Review (h)", value: (r) => csvHours(r.avgReviewHours) },
-  { header: "Per Active Day", value: (r) => csvNum(r.perActiveDay, 2) },
-  { header: "Active Days", value: (r) => r.activeDays },
+  { header: "Days Worked", value: (r) => r.activeDays },
+  { header: "Avg Reviewed per Day Worked", value: (r) => csvNum(r.perActiveDay, 2) },
 ];
 
 export default function EditorsTable({
@@ -58,7 +58,7 @@ export default function EditorsTable({
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Editors</h2>
           <p className="text-[11px] text-gray-400 dark:text-gray-500">
             Review latency is submission → first editorial pass; second pass counts post-send-back rechecks.
-            Per Day counts only days they actually handled something.
+            Days Worked is the number of days in the range they actually reviewed on; Avg / Day divides by it.
           </p>
         </div>
         <ExportCsvButton
@@ -69,7 +69,7 @@ export default function EditorsTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className={`w-full ${showSendBacks ? "min-w-[1000px]" : "min-w-[820px]"} text-xs`}>
+        <table className={`w-full ${showSendBacks ? "min-w-[1080px]" : "min-w-[900px]"} text-xs`}>
           <thead className="text-gray-400 dark:text-gray-500">
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <SortableTh label="Editor" colKey="editor" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -85,7 +85,8 @@ export default function EditorsTable({
               )}
               <SortableTh label="Med Review" colKey="medianReviewHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="Avg Review" colKey="avgReviewHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              <SortableTh label="Per Day" colKey="perActiveDay" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortableTh label="Days Worked" colKey="activeDays" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <SortableTh label="Avg / Day" colKey="perActiveDay" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
@@ -116,15 +117,13 @@ export default function EditorsTable({
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
                   {r.avgReviewHours == null ? "—" : fmtHours(r.avgReviewHours)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                  {fmtDec(r.perActiveDay, 2)}
-                  <span className="block text-[10px] text-gray-400">over {r.activeDays}d</span>
-                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtInt(r.activeDays)}</td>
+                <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-900 dark:text-white">{fmtDec(r.perActiveDay, 2)}</td>
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={showSendBacks ? 10 : 7} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={showSendBacks ? 11 : 8} className="px-3 py-8 text-center text-gray-400">
                   No editorial activity in this period
                 </td>
               </tr>
