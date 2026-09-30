@@ -977,6 +977,12 @@ async function ypGet(path: string, params?: Record<string, any>) {
   return res.data;
 }
 
+/** Yahoo + Critical Flow production in one place (the Yahoo page's Combined tab). */
+export async function fetchCombinedProduction(params: Record<string, any>) {
+  const res = await apiClient.get('/v1/production/combined', { params: cfParams(params) });
+  return res.data;
+}
+
 export async function fetchYpSyncStatus() {
   return ypGet('sync-status');
 }

@@ -15,6 +15,7 @@ import {
   fetchYpArticleTypes,
   fetchYpRoster,
   fetchYpInsights,
+  fetchCombinedProduction,
 } from "@/lib/api";
 import type {
   CfFilterParams,
@@ -33,6 +34,7 @@ import type {
   RosterResult,
   InsightsResult,
   YpQuotaAttainment,
+  CombinedProductionResult,
 } from "../types";
 
 /** Only the fields the API actually filters on reach the query string. */
@@ -169,5 +171,19 @@ export function useYpInsights(filters: CfFilterParams) {
     queryKey: ["yp-insights", filters],
     queryFn: () => fetchYpInsights(toParams(filters)),
     staleTime: STALE,
+  });
+}
+
+/** Only fetched while the Combined tab is open — it reads both pipelines. */
+export function useCombinedProduction(filters: CfFilterParams, enabled: boolean) {
+  const params: Record<string, unknown> = {};
+  if (filters.startDate) params.startDate = filters.startDate;
+  if (filters.endDate) params.endDate = filters.endDate;
+  if (filters.divisions?.length) params.divisions = filters.divisions;
+  return useQuery<CombinedProductionResult>({
+    queryKey: ["production-combined", params],
+    queryFn: () => fetchCombinedProduction(params),
+    staleTime: STALE,
+    enabled,
   });
 }

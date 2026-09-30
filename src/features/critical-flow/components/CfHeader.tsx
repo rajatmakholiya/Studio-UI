@@ -13,6 +13,7 @@ import {
   Calendar,
   Check,
   Target,
+  Layers,
 } from "lucide-react";
 import type { SyncStatus } from "../types";
 
@@ -22,7 +23,8 @@ export type CfTab =
   | "quality"
   | "speed"
   | "people"
-  | "insights";
+  | "insights"
+  | "combined";
 export type RangeKey = "7d" | "14d" | "30d" | "90d" | "all" | "custom";
 
 const TABS = [
@@ -46,6 +48,7 @@ const YAHOO_TABS = [
   { key: "speed" as CfTab, label: "Turnaround", icon: Timer },
   { key: "people" as CfTab, label: "People", icon: Users },
   { key: "insights" as CfTab, label: "Insights", icon: Sparkles },
+  { key: "combined" as CfTab, label: "Combined", icon: Layers },
 ];
 
 export const TAB_SETS = { critical: TABS, yahoo: YAHOO_TABS };

@@ -23,3 +23,26 @@ export interface YpQuotaAttainment {
   perDay: number;
   attainment: number | null;
 }
+
+/** Yahoo / Non-Yahoo counts for one cell of the Combined tab. */
+export interface ProductionSplit {
+  yahoo: number;
+  nonYahoo: number;
+  total: number;
+}
+
+/**
+ * Yahoo and Critical Flow production side by side. Yahoo = every piece on the
+ * Yahoo sheet (a CF piece it also tracks is counted once, here); Non-Yahoo = the
+ * rest of the CF sheets. Mirrors the API's combined-production.service.ts.
+ */
+export interface CombinedProductionResult {
+  startDate: string | null;
+  endDate: string | null;
+  totals: { submitted: ProductionSplit; published: ProductionSplit };
+  days: { date: string; published: ProductionSplit }[];
+  writers: { writer: string; division: string; submitted: ProductionSplit; sentBack: number }[];
+  editors: { editor: string; division: string; published: ProductionSplit }[];
+  divisions: { division: string; submitted: ProductionSplit; published: ProductionSplit }[];
+  notes: { sharedWithYahoo: number; undated: number };
+}

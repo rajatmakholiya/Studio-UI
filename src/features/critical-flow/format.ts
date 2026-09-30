@@ -101,7 +101,31 @@ export const STAGE_CLASS: Record<string, string> = {
 export function fmtDay(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  // A bare date parses as UTC midnight; formatting it in the viewer's zone
+  // would show the previous day anywhere west of UTC.
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+  return d.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  });
+}
+
+/**
+ * The last `days` desk days ending today, in IST — the zone every production
+ * stamp is recorded in. "7D" is seven days including today, not eight, and
+ * "today" does not lag behind until 05:30 the way a UTC date would.
+ */
+export function lastDaysIst(days: number): { startDate: string; endDate: string } {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const start = new Date(`${today}T12:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  return { startDate: start.toISOString().slice(0, 10), endDate: today };
 }
 
 /** Relative age from an ISO timestamp: "3h ago", "2d ago". */

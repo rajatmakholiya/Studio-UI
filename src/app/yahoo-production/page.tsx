@@ -19,6 +19,7 @@ import {
   useYpArticleTypes,
   useYpRoster,
   useYpInsights,
+  useCombinedProduction,
 } from "@/features/yahoo-production/hooks/useYahooData";
 
 // Yahoo is the same lifecycle as Critical Flow over a different source sheet,
@@ -51,6 +52,8 @@ import SubmissionHeatmap from "@/features/critical-flow/components/SubmissionHea
 import DuplicatesTable from "@/features/critical-flow/components/DuplicatesTable";
 import DataQualityCard from "@/features/critical-flow/components/DataQualityCard";
 import QuotaTable from "@/features/yahoo-production/components/QuotaTable";
+import CombinedProduction from "@/features/yahoo-production/components/CombinedProduction";
+import { lastDaysIst } from "@/features/critical-flow/format";
 import { useRole } from "@/hooks/useRole";
 
 const RANGE_DAYS: Record<Exclude<RangeKey, "custom">, number | null> = {
@@ -81,14 +84,7 @@ export default function YahooProductionPage() {
     }
     const days = RANGE_DAYS[range];
     if (days === null) return base;
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    return {
-      ...base,
-      startDate: start.toISOString().slice(0, 10),
-      endDate: end.toISOString().slice(0, 10),
-    };
+    return { ...base, ...lastDaysIst(days) };
   }, [range, divisions, customStart, customEnd]);
 
   const syncStatus = useYpSyncStatus();
@@ -118,6 +114,9 @@ export default function YahooProductionPage() {
 
   // Insights
   const insights = useYpInsights(filters);
+
+  // Combined: Yahoo + Critical Flow. Reads both pipelines, so only while open.
+  const combined = useCombinedProduction(filters, tab === "combined");
 
   const handleSync = useCallback(async () => {
     setIsSyncing(true);
@@ -292,6 +291,10 @@ export default function YahooProductionPage() {
             <DataQualityCard data={insights.data} isLoading={insights.isLoading} />
           </div>
         </>
+      )}
+
+      {tab === "combined" && (
+        <CombinedProduction data={combined.data} isLoading={combined.isLoading} />
       )}
     </div>
   );

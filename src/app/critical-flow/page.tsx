@@ -48,6 +48,7 @@ import SubmissionHeatmap from "@/features/critical-flow/components/SubmissionHea
 import DuplicatesTable from "@/features/critical-flow/components/DuplicatesTable";
 import DataQualityCard from "@/features/critical-flow/components/DataQualityCard";
 import { useRole } from "@/hooks/useRole";
+import { lastDaysIst } from "@/features/critical-flow/format";
 
 const RANGE_DAYS: Record<Exclude<RangeKey, "custom">, number | null> = {
   "7d": 7,
@@ -77,14 +78,7 @@ export default function CriticalFlowPage() {
     }
     const days = RANGE_DAYS[range];
     if (days === null) return base;
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    return {
-      ...base,
-      startDate: start.toISOString().slice(0, 10),
-      endDate: end.toISOString().slice(0, 10),
-    };
+    return { ...base, ...lastDaysIst(days) };
   }, [range, divisions, customStart, customEnd]);
 
   const syncStatus = useCfSyncStatus();
