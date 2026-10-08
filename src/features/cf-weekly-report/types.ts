@@ -7,7 +7,7 @@ export interface ReportWeek {
 }
 
 export interface WeekTally {
-  /** Pieces submitted (writers) or published (editors). */
+  /** Pieces submitted (writers), published (editors) or written (editors' own). */
   output: number;
   daysWorked: number;
   /** People with any output. */
@@ -22,24 +22,36 @@ export interface ReportMember {
   weeks: WeekTally[];
 }
 
+export type GroupKey =
+  | "stables"
+  | "part-time"
+  | "msn"
+  | "tenured"
+  | "editors"
+  | "producers"
+  | "pod"
+  | "non-pod"
+  | "associates"
+  | "stables-editors"
+  | "unlisted";
+
 export interface ReportGroup {
+  key: GroupKey;
   name: string;
-  measure: "submitted" | "published" | "by role";
-  /** Output per person per day; null for writers on no schedule. */
+  measure: "submitted" | "published" | "by role" | "written";
+  /** Output per person per day; null where the sheet sets none. */
   target: number | null;
   rostered: number;
+  /** Rostered members on leave for the whole of the latest week. */
+  onLeave: number;
+  divisions: string[];
   weeks: WeekTally[];
   members: ReportMember[];
-}
-
-export interface ReportSection {
-  title: string;
-  groups: ReportGroup[];
 }
 
 export interface WeeklyReport {
   /** Oldest first; the last is the week the report is as of. */
   weeks: ReportWeek[];
   latestEnd: string;
-  sections: ReportSection[];
+  groups: ReportGroup[];
 }

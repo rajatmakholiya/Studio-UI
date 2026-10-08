@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useWeeklyReport } from "@/features/cf-weekly-report/hooks/useWeeklyReport";
 import { addDays } from "@/features/cf-weekly-report/format";
 import WeeklyReportHeader from "@/features/cf-weekly-report/components/WeeklyReportHeader";
-import TargetTiles from "@/features/cf-weekly-report/components/TargetTiles";
-import ReportSection from "@/features/cf-weekly-report/components/ReportSection";
+import WeeklySheet from "@/features/cf-weekly-report/components/WeeklySheet";
 import CfSkeleton from "@/features/critical-flow/components/CfSkeleton";
 
-// Computed by the API from the production the desk already tracks, in the
-// groups of the managers' own Week on Week sheet.
+// Computed by the API from the production the desk already tracks, laid out as
+// the managers' own Week on Week sheet.
 export default function CfWeeklyReportPage() {
   const [end, setEnd] = useState<string | undefined>();
   const report = useWeeklyReport(end);
@@ -32,12 +31,7 @@ export default function CfWeeklyReportPage() {
           <p className="mt-1 text-xs text-gray-400">The API could not be reached.</p>
         </div>
       ) : (
-        <>
-          <TargetTiles sections={data.sections} />
-          {data.sections.map((s) => (
-            <ReportSection key={s.title} section={s} weeks={data.weeks} />
-          ))}
-        </>
+        <WeeklySheet report={data} />
       )}
     </div>
   );

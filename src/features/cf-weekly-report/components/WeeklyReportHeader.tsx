@@ -1,7 +1,9 @@
 "use client";
 
 import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
-import type { WeeklyReport } from "../types";
+import ExportCsvButton from "@/components/ui/ExportCsvButton";
+import type { CsvColumn } from "@/lib/csv";
+import type { ReportWeek, WeekTally, WeeklyReport } from "../types";
 import { shortDate } from "../format";
 
 interface Props {
@@ -10,11 +12,36 @@ interface Props {
   onShift: (weeks: number) => void;
 }
 
+interface CsvRow {
+  group: string;
+  person: string;
+  division: string;
+  weeks: WeekTally[];
+  target: number | null;
+}
+
+const csvColumns = (weeks: ReportWeek[]): CsvColumn<CsvRow>[] => [
+  { header: "Group", value: (r) => r.group },
+  { header: "Person", value: (r) => r.person },
+  { header: "Division", value: (r) => r.division },
+  ...weeks.flatMap((w, i) => [
+    { header: `${w.start} to ${w.end} per day`, value: (r: CsvRow) => r.weeks[i].perDay },
+    { header: `${w.start} to ${w.end} pieces`, value: (r: CsvRow) => r.weeks[i].output },
+    { header: `${w.start} to ${w.end} people`, value: (r: CsvRow) => r.weeks[i].active },
+    { header: `${w.start} to ${w.end} days`, value: (r: CsvRow) => r.weeks[i].daysWorked },
+  ]),
+  { header: "Target per day", value: (r) => r.target },
+];
+
 export default function WeeklyReportHeader({ report, onShift }: Props) {
   const weeks = report?.weeks ?? [];
   const first = weeks[0];
   const last = weeks.at(-1);
   const atLatest = !!last && last.end >= (report?.latestEnd ?? "");
+  const csvRows: CsvRow[] = (report?.groups ?? []).flatMap((g) => [
+    { group: g.name, person: "", division: "", weeks: g.weeks, target: g.target },
+    ...g.members.map((m) => ({ group: g.name, person: m.name, division: m.division, weeks: m.weeks, target: g.target })),
+  ]);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
@@ -50,10 +77,13 @@ export default function WeeklyReportHeader({ report, onShift }: Props) {
           </button>
         )}
       </div>
-      <span className="text-[11px] text-gray-400">
-        Weeks run Monday to Sunday · computed from Critical Flow and Yahoo production · per person per day
-        worked
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-[11px] text-gray-400">
+          Weeks run Monday to Sunday · computed from Critical Flow and Yahoo production · open a group to see each
+          person
+        </span>
+        <ExportCsvButton rows={csvRows} columns={csvColumns(weeks)} filename="cf-weekly-report" />
+      </div>
     </div>
   );
 }
