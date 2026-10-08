@@ -17,7 +17,7 @@ export default function AppLayoutWrapper({
   const pathname = usePathname();
   // Legal/compliance pages and login are public — no auth or app chrome.
   const isPublicPage = isPublicRoute(pathname);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useAuth();
 

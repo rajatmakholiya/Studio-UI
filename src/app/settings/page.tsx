@@ -32,11 +32,37 @@ declare global {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+// Grantor key the API uses for profiles connected before it recorded which
+// Facebook account added them.
+const LEGACY_GRANTOR = "legacy";
+
+type Grantor = { id: string; name: string };
+
+type SourceAccount = {
+  id: string;
+  name: string;
+  pages: number;
+  igAccounts: number;
+  failing: number;
+};
+
+async function fetchActiveProfiles(): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/analytics/profiles/list`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const profiles = await res.json();
+    return Array.isArray(profiles) ? profiles : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function SettingsPage() {
   const { canAccess } = useRole();
   const router = useRouter();
 
-  const [connected, setConnected] = useState({ meta: false, instagram: false });
   const [isSdkLoaded, setIsSdkLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
@@ -58,9 +84,14 @@ export default function SettingsPage() {
   const [availableIgAccounts, setAvailableIgAccounts] = useState<any[]>([]);
   const [selectedIgAccounts, setSelectedIgAccounts] = useState<any[]>([]);
 
+  // The Facebook user the open import modal was fetched for.
+  const [grantor, setGrantor] = useState<Grantor | null>(null);
+
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  // null disconnects everything; otherwise only the pages that account granted.
+  const [disconnectTarget, setDisconnectTarget] = useState<SourceAccount | null>(null);
   const [deleteDataOnDisconnect, setDeleteDataOnDisconnect] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -98,24 +129,15 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const reloadProfiles = async () => {
+    const profiles = await fetchActiveProfiles();
+    if (profiles) setActiveProfiles(profiles);
+  };
+
   useEffect(() => {
-    const checkConnectionStatus = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/analytics/profiles/list`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const profiles = await res.json();
-          if (Array.isArray(profiles)) {
-            setActiveProfiles(profiles);
-            const hasMeta = profiles.some((p: any) => p.platform === "facebook");
-            const hasIg = profiles.some((p: any) => p.platform === "instagram");
-            setConnected((prev) => ({ ...prev, meta: hasMeta, instagram: hasIg }));
-          }
-        }
-      } catch (err) {}
-    };
-    checkConnectionStatus();
+    fetchActiveProfiles().then((profiles) => {
+      if (profiles) setActiveProfiles(profiles);
+    });
   }, []);
 
   // Fetch email report recipients
@@ -188,7 +210,10 @@ export default function SettingsPage() {
     setIsSendingTest(false);
   };
 
-  const handleConnect = () => {
+  // switchAccount forces Facebook's credential screen, which is the only way to
+  // reach a different profile than the one the browser is already signed into
+  // — without it FB.login silently reuses that session.
+  const handleConnect = (switchAccount = false) => {
     if (!isSdkLoaded) return;
     setIsLoading(true);
 
@@ -205,6 +230,7 @@ export default function SettingsPage() {
           })
             .then((res) => res.json())
             .then((data) => {
+              setGrantor(data.grantor ?? null);
               if (data.pages) {
                 setAvailablePages(data.pages);
                 setSelectedPages(data.pages);
@@ -239,6 +265,7 @@ export default function SettingsPage() {
         //   instagram_manage_comments-> GET /{ig-media}/comments
         scope:
           "public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,read_insights,instagram_basic,instagram_manage_insights,instagram_manage_comments",
+        ...(switchAccount ? { auth_type: "reauthenticate" } : {}),
       },
     );
   };
@@ -252,7 +279,7 @@ export default function SettingsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ selectedPages, selectedIgAccounts }),
+          body: JSON.stringify({ selectedPages, selectedIgAccounts, grantor }),
         },
       );
 
@@ -271,14 +298,10 @@ export default function SettingsPage() {
         setSelectedPages([]);
         setAvailableIgAccounts([]);
         setSelectedIgAccounts([]);
+        setGrantor(null);
         setShowModal(false);
-        
-        setConnected({ ...connected, meta: true, instagram: true });
 
-        const res = await fetch(`${BACKEND_URL}/api/analytics/profiles/list`, {
-          credentials: "include",
-        });
-        if (res.ok) setActiveProfiles(await res.json());
+        await reloadProfiles();
       }
     } catch (error) {}
     setIsLoading(false);
@@ -318,19 +341,33 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ deleteData: deleteDataOnDisconnect, platform: "all" }),
+        body: JSON.stringify({
+          deleteData: deleteDataOnDisconnect,
+          platform: "all",
+          ...(disconnectTarget ? { connectedViaId: disconnectTarget.id } : {}),
+        }),
       });
 
       if (response.ok) {
-        setConnected({ ...connected, meta: false, instagram: false });
-        setActiveProfiles([]);
-        setShowDisconnectModal(false);
-        setDeleteDataOnDisconnect(false);
+        if (disconnectTarget) await reloadProfiles();
+        else setActiveProfiles([]);
+        closeDisconnectModal();
       }
     } catch (error) {
       console.error("Failed to disconnect:", error);
     }
     setIsDisconnecting(false);
+  };
+
+  const openDisconnectModal = (target: SourceAccount | null) => {
+    setDisconnectTarget(target);
+    setShowDisconnectModal(true);
+  };
+
+  const closeDisconnectModal = () => {
+    setShowDisconnectModal(false);
+    setDeleteDataOnDisconnect(false);
+    setDisconnectTarget(null);
   };
 
   const handleAppLogout = async () => {
@@ -387,6 +424,39 @@ export default function SettingsPage() {
   const errorProfiles = activeProfiles.filter(
     (p) => p.syncState === "FAILED" && p.lastSyncError,
   );
+
+  const connected = {
+    meta: activeProfiles.some((p) => p.platform === "facebook"),
+    instagram: activeProfiles.some((p) => p.platform === "instagram"),
+  };
+
+  const sourceById = new Map<string, SourceAccount>();
+  for (const p of activeProfiles) {
+    const id = p.connectedViaId || LEGACY_GRANTOR;
+    let src = sourceById.get(id);
+    if (!src) {
+      src = { id, name: p.connectedViaName || "Earlier connection", pages: 0, igAccounts: 0, failing: 0 };
+      sourceById.set(id, src);
+    }
+    if (p.platform === "facebook") src.pages++;
+    else if (p.platform === "instagram") src.igAccounts++;
+    if (p.syncState === "FAILED") src.failing++;
+  }
+  const sourceAccounts = [...sourceById.values()].sort(
+    (a, b) => Number(a.id === LEGACY_GRANTOR) - Number(b.id === LEGACY_GRANTOR),
+  );
+
+  const profileById = new Map(activeProfiles.map((p) => [p.profileId, p]));
+  const grantorAlreadyConnected = !!grantor && sourceById.has(grantor.id);
+
+  // Shown beside a page in the import modal when it is already being synced, so
+  // it is clear that keeping it ticked moves it onto the account signing in now.
+  const trackedLabel = (id: string) => {
+    const existing = profileById.get(id);
+    if (!existing) return null;
+    if (grantor && existing.connectedViaId === grantor.id) return "Tracked";
+    return `Tracked via ${existing.connectedViaName || "an earlier connection"}`;
+  };
 
  return (
     <div className="max-w-4xl space-y-6 pb-12">
@@ -471,8 +541,8 @@ export default function SettingsPage() {
                 </div>
 
                 {!connected.meta && !connected.instagram ? (
-                  <button 
-                    onClick={handleConnect}
+                  <button
+                    onClick={() => handleConnect()}
                     disabled={!isSdkLoaded || isLoading}
                     className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-[#1877F2] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#166fe5] disabled:opacity-50"
                   >
@@ -480,9 +550,18 @@ export default function SettingsPage() {
                     <span>{isLoading ? "Loading..." : "Connect to Meta"}</span>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setShowDisconnectModal(true)}
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <button
+                      onClick={() => handleConnect(true)}
+                      disabled={!isSdkLoaded || isLoading}
+                      title="Sign in to Facebook as a different profile and add its pages"
+                      className="flex items-center gap-2 rounded-xl bg-[#1877F2] px-5 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#166fe5] disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                      {isLoading ? "Loading..." : "Connect another account"}
+                    </button>
+                    <button
+                      onClick={() => openDisconnectModal(null)}
                       className="rounded-xl border border-red-200 dark:border-red-900/30 bg-white dark:bg-gray-800 px-5 py-2 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-sm transition-colors flex items-center gap-2"
                     >
                       Disconnect All
@@ -490,6 +569,52 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              {sourceAccounts.length > 0 && (
+                <div className="mt-5 sm:ml-16 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Connected Facebook Accounts
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {sourceAccounts.map((src) => (
+                      <div key={src.id} className="flex items-center gap-3 px-4 py-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-sm font-bold text-[#1877F2] dark:text-blue-400">
+                          {src.id === LEGACY_GRANTOR ? <Clock size={16} /> : src.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{src.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {src.pages} page{src.pages === 1 ? "" : "s"}
+                            {src.igAccounts > 0 && ` · ${src.igAccounts} Instagram`}
+                            {src.id === LEGACY_GRANTOR && " · reconnect the Facebook account that added these to label them"}
+                          </p>
+                          {src.failing > 0 && (
+                            <p className="mt-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                              {src.failing} failing to sync
+                            </p>
+                          )}
+                        </div>
+                        {src.failing > 0 && (
+                          <button
+                            onClick={() => handleConnect(true)}
+                            disabled={!isSdkLoaded || isLoading}
+                            title={src.id === LEGACY_GRANTOR ? "Sign in again to refresh page tokens" : `Sign in as ${src.name} again to refresh its page tokens`}
+                            className="shrink-0 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-bold text-[#1877F2] dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50"
+                          >
+                            Reconnect
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openDisconnectModal(src)}
+                          className="shrink-0 rounded-lg border border-red-200 dark:border-red-900/30 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* INSTAGRAM SECTION */}
@@ -657,9 +782,13 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-              <h3 className="font-bold text-xl text-gray-900 dark:text-white">Disconnect Meta Accounts</h3>
+              <h3 className="font-bold text-xl text-gray-900 dark:text-white">
+                {disconnectTarget ? `Disconnect ${disconnectTarget.name}` : "Disconnect Meta Accounts"}
+              </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Are you sure you want to disconnect? Your automated data syncing will stop immediately for all Facebook and Instagram pages.
+                {disconnectTarget
+                  ? `Automated data syncing will stop immediately for the ${disconnectTarget.pages + disconnectTarget.igAccounts} page(s) and account(s) connected through ${disconnectTarget.name}. Pages from other Facebook accounts keep syncing.`
+                  : "Are you sure you want to disconnect? Your automated data syncing will stop immediately for all Facebook and Instagram pages."}
               </p>
             </div>
             
@@ -676,18 +805,15 @@ export default function SettingsPage() {
                 <div>
                   <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-red-600 transition-colors">Delete all historical data</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1 leading-relaxed">
-                    Checking this will permanently remove all downloaded posts and analytics from your database. Leave unchecked to save time if you plan to reconnect later.
+                    Checking this will permanently remove all downloaded posts and analytics {disconnectTarget ? "for these pages " : ""}from your database. Leave unchecked to save time if you plan to reconnect later.
                   </span>
                 </div>
               </label>
             </div>
             
             <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 shrink-0">
-              <button 
-                onClick={() => {
-                  setShowDisconnectModal(false);
-                  setDeleteDataOnDisconnect(false);
-                }} 
+              <button
+                onClick={closeDisconnectModal}
                 disabled={isDisconnecting}
                 className="px-4 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
               >
@@ -698,7 +824,7 @@ export default function SettingsPage() {
                 disabled={isDisconnecting} 
                 className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-700 transition-all disabled:opacity-50"
               >
-                {isDisconnecting ? <Loader2 size={16} className="animate-spin" /> : "Disconnect Accounts"}
+                {isDisconnecting ? <Loader2 size={16} className="animate-spin" /> : disconnectTarget ? "Disconnect" : "Disconnect Accounts"}
               </button>
             </div>
           </div>
@@ -712,6 +838,16 @@ export default function SettingsPage() {
               <div>
                 <h3 className="font-bold text-xl text-gray-900 dark:text-white">Import Meta Pages</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Select the pages you want to track in your workspace.</p>
+                {grantor && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#1877F2] dark:text-blue-400">
+                    <Facebook size={12} fill="currentColor" /> Signed in as {grantor.name}
+                  </p>
+                )}
+                {grantorAlreadyConnected && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                    This account is already connected — pages from it that you untick will stop syncing. To add a different profile, use Connect another account.
+                  </p>
+                )}
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
                 <X size={20} />
@@ -743,11 +879,13 @@ export default function SettingsPage() {
                       <h4 className="px-2 pb-1 text-xs font-bold text-gray-500 uppercase tracking-wider">Facebook Pages</h4>
                       {filteredPages.map((page) => {
                         const isSelected = selectedPages.some((p) => p.id === page.id);
+                        const tracked = trackedLabel(page.id);
                         return (
                           <button key={page.id} onClick={() => toggleSelection(page)} className={`flex items-center gap-4 w-full text-left px-4 py-3 text-sm transition-all rounded-xl border ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-gray-900 dark:text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
                             {isSelected ? <CheckSquare size={18} className="text-blue-600 flex-shrink-0"/> : <Square size={18} className="text-gray-300 flex-shrink-0"/>}
                             <div className="flex-1 truncate">
                               <span className={`block ${isSelected ? 'font-bold' : 'font-medium'}`}>{page.name}</span>
+                              {tracked && <span className="block text-xs text-gray-500">{tracked}</span>}
                             </div>
                             <Facebook size={16} className="text-[#1877F2] opacity-70" />
                           </button>
@@ -762,6 +900,7 @@ export default function SettingsPage() {
                       <h4 className="px-2 pb-1 text-xs font-bold text-gray-500 uppercase tracking-wider">Instagram Accounts</h4>
                       {filteredIgAccounts.map((ig) => {
                         const isSelected = selectedIgAccounts.some((p) => p.id === ig.id);
+                        const tracked = trackedLabel(ig.id);
                         return (
                           <button key={ig.id} onClick={() => toggleIgSelection(ig)} className={`flex items-center gap-4 w-full text-left px-4 py-3 text-sm transition-all rounded-xl border ${isSelected ? 'bg-fuchsia-50/50 dark:bg-fuchsia-900/20 border-fuchsia-200 dark:border-fuchsia-800 text-gray-900 dark:text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
                             {isSelected ? <CheckSquare size={18} className="text-fuchsia-600 flex-shrink-0"/> : <Square size={18} className="text-gray-300 flex-shrink-0"/>}
@@ -772,7 +911,7 @@ export default function SettingsPage() {
                             )}
                             <div className="flex-1 truncate">
                               <span className={`block ${isSelected ? 'font-bold' : 'font-medium'}`}>{ig.name || ig.username}</span>
-                              <span className="text-xs text-gray-500">@{ig.username}</span>
+                              <span className="text-xs text-gray-500">@{ig.username}{tracked && ` · ${tracked}`}</span>
                             </div>
                             <Instagram size={16} className="text-[#E1306C] opacity-70" />
                           </button>
