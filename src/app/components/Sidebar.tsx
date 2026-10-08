@@ -71,6 +71,7 @@ const nav: NavEntry[] = [
     children: [
       link("Production", "/critical-flow", GaugeCircle),
       link("Yahoo Production", "/yahoo-production", GaugeCircle),
+      link("Stable Production", "/stable-production", GaugeCircle),
       link("Resources", "/cf-resources", Users),
     ],
   },

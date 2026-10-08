@@ -20,6 +20,7 @@ const PAGE_TITLES: { match: string; title: string; subtitle?: string }[] = [
   { match: '/cf-resources',     title: 'Resource Management',     subtitle: 'Who is free, who is loaded, and who can cover — Critical Flow and Yahoo' },
   { match: '/critical-flow',    title: 'Critical Flow Production', subtitle: 'Allotment to publication across every division' },
   { match: '/yahoo-production', title: 'Yahoo Production',        subtitle: 'Allotment to publication across the Yahoo desk' },
+  { match: '/stable-production', title: 'Stable Production',      subtitle: 'Where every stable piece stands, event by event' },
   // Temporarily hidden:
   // { match: '/msn-reports',      title: 'MSN Reports',             subtitle: 'Syndication numbers from the MSN Partner Hub — EOD, EOW and MTD' },
   // { match: '/msn-production',   title: 'MSN Production',          subtitle: 'Editorial pipeline and team performance' },

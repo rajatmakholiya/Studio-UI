@@ -1047,3 +1047,62 @@ export async function fetchYpRoster(params: Record<string, any>) {
 export async function fetchYpInsights(params: Record<string, any>) {
   return ypGet('insights', params);
 }
+
+// ─── Stable Production ───────────────────────────────────────────────────────
+//
+// A snapshot of the Stable workbook, one event per tab. No date parameters:
+// the sheet keeps no timestamps, so events are the axis every view filters on.
+
+const SP_URL = '/v1/stable-production';
+
+async function spGet(path: string, params?: Record<string, any>) {
+  const res = await apiClient.get(`${SP_URL}/${path}`, {
+    params: params ? cfParams(params) : undefined,
+  });
+  return res.data;
+}
+
+export async function fetchSpSyncStatus() {
+  return spGet('sync-status');
+}
+
+export async function triggerSpSync() {
+  const res = await apiClient.post(`${SP_URL}/sync`);
+  return res.data;
+}
+
+export async function fetchSpFilters() {
+  return spGet('filters');
+}
+
+export async function fetchSpOverview(params: Record<string, any>) {
+  return spGet('overview', params);
+}
+
+export async function fetchSpEvents(params: Record<string, any>) {
+  return spGet('events', params);
+}
+
+export async function fetchSpWriters(params: Record<string, any>) {
+  return spGet('writers', params);
+}
+
+export async function fetchSpEditors(params: Record<string, any>) {
+  return spGet('editors', params);
+}
+
+export async function fetchSpStableTypes(params: Record<string, any>) {
+  return spGet('stable-types', params);
+}
+
+export async function fetchSpQueue(params: Record<string, any>) {
+  return spGet('queue', params);
+}
+
+export async function fetchSpRoster(params: Record<string, any>) {
+  return spGet('roster', params);
+}
+
+export async function fetchSpQuality(params: Record<string, any>) {
+  return spGet('quality', params);
+}
