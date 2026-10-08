@@ -21,6 +21,7 @@ const PAGE_TITLES: { match: string; title: string; subtitle?: string }[] = [
   { match: '/critical-flow',    title: 'Critical Flow Production', subtitle: 'Allotment to publication across every division' },
   { match: '/yahoo-production', title: 'Yahoo Production',        subtitle: 'Allotment to publication across the Yahoo desk' },
   { match: '/stable-production', title: 'Stable Production',      subtitle: 'Where every stable piece stands, event by event' },
+  { match: '/cf-weekly-report', title: 'Weekly Report',          subtitle: 'Week on week efficiency of every Critical Flow division' },
   // Temporarily hidden:
   // { match: '/msn-reports',      title: 'MSN Reports',             subtitle: 'Syndication numbers from the MSN Partner Hub — EOD, EOW and MTD' },
   // { match: '/msn-production',   title: 'MSN Production',          subtitle: 'Editorial pipeline and team performance' },

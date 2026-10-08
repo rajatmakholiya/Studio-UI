@@ -1106,3 +1106,13 @@ export async function fetchSpRoster(params: Record<string, any>) {
 export async function fetchSpQuality(params: Record<string, any>) {
   return spGet('quality', params);
 }
+
+// ─── Critical Flow weekly report ─────────────────────────────────────────────
+//
+// Week-on-week efficiency per group, computed by the API from the production it
+// already syncs. `end` is the last week shown; omitted, the latest complete week.
+
+export async function fetchCfWeeklyReport(end?: string) {
+  const res = await apiClient.get('/v1/cf-weekly-report', { params: end ? { end } : undefined });
+  return res.data;
+}
