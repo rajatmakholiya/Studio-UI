@@ -9,6 +9,7 @@ import {
   HeadlineWindows,
 } from "../types";
 import { platformKeysForMapping, type TrafficPlatformKey } from "./traffic-platforms";
+import type { UserRole } from "./access";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const API_BASE_URL = `/v1/analytics`;
@@ -79,7 +80,7 @@ export async function setAccountPassword(
 export interface AppUser {
   id: string;
   email: string;
-  role: "superadmin" | "admin" | "management" | "user";
+  role: UserRole;
   createdAt: string;
   lastLoginAt: string | null;
   passwordUpdatedAt: string | null;

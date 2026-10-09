@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Loader2, CloudDownload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRole } from "@/hooks/useRole";
 
 export default function GlobalSyncScreen({
   children,
@@ -18,7 +19,13 @@ export default function GlobalSyncScreen({
 
   const initialJobsRef = React.useRef<number | null>(null);
 
+  // The Meta sync only concerns Social Media; the API refuses everyone else.
+  const { canUse } = useRole();
+  const watchesSync = canUse("sm");
+
   useEffect(() => {
+    if (!watchesSync) return;
+
     const checkSyncStatus = async () => {
       const BACKEND_URL =
         process.env.NEXT_PUBLIC_API_URL || "";
@@ -64,7 +71,8 @@ export default function GlobalSyncScreen({
     const interval = setInterval(checkSyncStatus, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchesSync]);
 
   const isRestrictedPage =
     pathname?.startsWith("/reports") || pathname?.startsWith("/settings");

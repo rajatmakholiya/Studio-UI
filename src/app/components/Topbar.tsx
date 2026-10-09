@@ -2,14 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { useRole, type UserRole } from '@/hooks/useRole';
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  superadmin: 'SUPER USER',
-  admin: 'ADMIN',
-  management: 'MANAGER',
-  user: 'USER',
-};
+import { useRole } from '@/hooks/useRole';
+import { ROLE_LABEL } from '@/lib/access';
 
 const PAGE_TITLES: { match: string; title: string; subtitle?: string }[] = [
   { match: '/revenue/mappings', title: 'Revenue Page Mappings',  subtitle: 'Manage teams and page assignments' },
@@ -35,8 +29,9 @@ const PAGE_TITLES: { match: string; title: string; subtitle?: string }[] = [
 
 export default function Topbar() {
   const pathname = usePathname();
-  const page = PAGE_TITLES.find(p => pathname.startsWith(p.match));
-  const { role, email } = useRole();
+  const { role, email, canView } = useRole();
+  // No heading for a page the gate below is refusing to show.
+  const page = canView(pathname) ? PAGE_TITLES.find(p => pathname.startsWith(p.match)) : undefined;
 
   return (
     <div className="flex items-center justify-between gap-6 pb-6">
@@ -65,7 +60,7 @@ export default function Topbar() {
             <p className="max-w-[180px] truncate text-sm font-semibold text-gray-900 dark:text-white" title={email}>
               {email ? email.split('@')[0] : 'User'}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{ROLE_LABEL[role]}</p>
+            <p className="text-xs uppercase text-gray-500 dark:text-gray-400">{ROLE_LABEL[role]}</p>
           </div>
           <div className="h-9 w-9 overflow-hidden rounded-full bg-orange-100 dark:bg-orange-900/30">
             <img

@@ -22,7 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useRole, type UserRole } from "@/hooks/useRole";
+import { useRole } from "@/hooks/useRole";
 
 type Icon = typeof LayoutDashboard;
 
@@ -31,7 +31,6 @@ interface NavLink {
   name: string;
   href: string;
   icon: Icon;
-  minRole: UserRole;
 }
 
 interface NavGroup {
@@ -43,12 +42,12 @@ interface NavGroup {
 
 type NavEntry = NavLink | NavGroup;
 
-const link = (
-  name: string,
-  href: string,
-  icon: Icon,
-  minRole: UserRole = "user",
-): NavLink => ({ kind: "link", name, href, icon, minRole });
+const link = (name: string, href: string, icon: Icon): NavLink => ({
+  kind: "link",
+  name,
+  href,
+  icon,
+});
 
 const nav: NavEntry[] = [
   link("Dashboard", "/dashboard", LayoutDashboard),
@@ -77,7 +76,7 @@ const nav: NavEntry[] = [
       link("Resources", "/cf-resources", Users),
     ],
   },
-  link("Access", "/users", ShieldCheck, "superadmin"),
+  link("Access", "/users", ShieldCheck),
   link("Settings", "/settings", Settings),
 ];
 
@@ -88,18 +87,19 @@ interface SidebarProps {
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { canAccess } = useRole();
+  const { canView } = useRole();
 
   const isLinkActive = (href: string) => pathname.startsWith(href);
 
+  // Who may open what lives in lib/access, shared with the route guard.
   const visible: NavEntry[] = nav
     .map((entry) =>
       entry.kind === "link"
         ? entry
-        : { ...entry, children: entry.children.filter((c) => canAccess(c.minRole)) },
+        : { ...entry, children: entry.children.filter((c) => canView(c.href)) },
     )
     .filter((entry) =>
-      entry.kind === "link" ? canAccess(entry.minRole) : entry.children.length > 0,
+      entry.kind === "link" ? canView(entry.href) : entry.children.length > 0,
     );
 
   // A group opens when the current page is inside it, and otherwise remembers

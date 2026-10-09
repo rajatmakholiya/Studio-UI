@@ -5,25 +5,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, ShieldCheck } from "lucide-react";
 import { fetchUsers, updateUserRole, type AppUser } from "@/lib/api";
 import { useRole } from "@/hooks/useRole";
+import { ASSIGNABLE_ROLES, ROLE_LABEL, type UserRole as Role } from "@/lib/access";
 import { fmtAgo } from "@/features/critical-flow/format";
 
-type Role = AppUser["role"];
-
-const ROLE_LABEL: Record<Role, string> = {
-  superadmin: "Super user",
-  admin: "Admin",
-  management: "Manager",
-  user: "User",
-};
+const SM_CLASS = "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400";
+const CF_CLASS = "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400";
+const NO_ACCESS_CLASS = "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
 
 const ROLE_CLASS: Record<Role, string> = {
   superadmin: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
   admin: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400",
-  management: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400",
-  user: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  sm_manager: SM_CLASS,
+  sm_user: SM_CLASS,
+  cf_manager: CF_CLASS,
+  cf_user: CF_CLASS,
+  management: NO_ACCESS_CLASS,
+  user: NO_ACCESS_CLASS,
 };
 
-const ASSIGNABLE: Role[] = ["user", "management", "admin"];
+const FILTERS: { key: string; label: string; roles: Role[] }[] = [
+  { key: "admin", label: "Admins", roles: ["admin"] },
+  { key: "sm", label: "Social Media", roles: ["sm_manager", "sm_user"] },
+  { key: "cf", label: "Critical Flow", roles: ["cf_manager", "cf_user"] },
+  // The old team-less Manager opens no pages either, so it is counted here.
+  { key: "none", label: "No access yet", roles: ["user", "management"] },
+];
 
 // An explicit locale, so server and browser render the same string.
 const joinedFmt = new Intl.DateTimeFormat("en-GB", {
@@ -43,7 +49,7 @@ export default function UsersPage() {
   const isSuper = canAccess("superadmin");
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [flash, setFlash] = useState<{ id: string; text: string; ok: boolean } | null>(null);
 
   const users = useQuery({ queryKey: ["users"], queryFn: fetchUsers, enabled: isSuper });
@@ -52,27 +58,30 @@ export default function UsersPage() {
     mutationFn: ({ id, role }: { id: string; role: Role }) => updateUserRole(id, role),
     onSuccess: (u) => {
       qc.setQueryData<AppUser[]>(["users"], (prev) => prev?.map((x) => (x.id === u.id ? u : x)));
-      setFlash({ id: u.id, text: `Now ${ROLE_LABEL[u.role]}`, ok: true });
+      setFlash({ id: u.id, text: u.role === "user" ? "Access removed" : `Now ${ROLE_LABEL[u.role]}`, ok: true });
     },
     onError: (err, vars) => setFlash({ id: vars.id, text: errorMessage(err), ok: false }),
   });
 
   const counts = useMemo(() => {
-    const c: Record<Role, number> = { superadmin: 0, admin: 0, management: 0, user: 0 };
-    for (const u of users.data ?? []) c[u.role] = (c[u.role] ?? 0) + 1;
+    const c: Record<string, number> = {};
+    for (const f of FILTERS) {
+      c[f.key] = (users.data ?? []).filter((u) => f.roles.includes(u.role)).length;
+    }
     return c;
   }, [users.data]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const roles = FILTERS.find((f) => f.key === roleFilter)?.roles;
     return (users.data ?? [])
-      .filter((u) => roleFilter === "all" || u.role === roleFilter)
+      .filter((u) => !roles || roles.includes(u.role))
       .filter((u) => !q || u.email.toLowerCase().includes(q));
   }, [users.data, query, roleFilter]);
 
   const change = (u: AppUser, role: Role) => {
     if (role === u.role) return;
-    if (role === "admin" && !window.confirm(`Give ${u.email} admin access? Admins can run syncs and change settings.`)) {
+    if (role === "admin" && !window.confirm(`Give ${u.email} admin access? Admins see every page, and can run syncs and change settings.`)) {
       return;
     }
     setFlash(null);
@@ -95,17 +104,17 @@ export default function UsersPage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
-            {(["all", "admin", "management", "user"] as const).map((r) => (
+            {[{ key: "all", label: "Everyone" }, ...FILTERS].map((f) => (
               <button
-                key={r}
-                onClick={() => setRoleFilter(r)}
+                key={f.key}
+                onClick={() => setRoleFilter(f.key)}
                 className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                  roleFilter === r
+                  roleFilter === f.key
                     ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
                 }`}
               >
-                {r === "all" ? `Everyone ${users.data?.length ?? ""}` : `${ROLE_LABEL[r]}s ${counts[r]}`}
+                {f.label} {f.key === "all" ? users.data?.length ?? "" : counts[f.key]}
               </button>
             ))}
           </div>
@@ -121,8 +130,10 @@ export default function UsersPage() {
         </div>
 
         <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
-          Everyone who signs up starts as a User. Managers can edit quotas and connected accounts; Admins can also run syncs.
-          A change applies on the person&apos;s next page load.
+          Everyone who signs up starts with no access, and sees no pages until given a role here.
+          Social Media roles open the Dashboard, Web Traffic and Reports; an SM Manager also gets Revenue, connected accounts and email-report recipients.
+          Critical Flow roles open every Critical Flow page; a CF Manager can also edit quotas.
+          Admins see everything and can run syncs. A change applies on the person&apos;s next page load.
         </p>
 
         <div className="mt-3 overflow-x-auto">
@@ -161,7 +172,10 @@ export default function UsersPage() {
                             onChange={(e) => change(u, e.target.value as Role)}
                             className={`rounded-md border-0 px-1.5 py-0.5 text-[11px] font-medium focus:ring-1 focus:ring-blue-400 ${ROLE_CLASS[u.role]}`}
                           >
-                            {ASSIGNABLE.map((r) => (
+                            {!ASSIGNABLE_ROLES.includes(u.role) && (
+                              <option value={u.role} disabled>{ROLE_LABEL[u.role]}</option>
+                            )}
+                            {ASSIGNABLE_ROLES.map((r) => (
                               <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                             ))}
                           </select>

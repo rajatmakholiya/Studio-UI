@@ -10,6 +10,7 @@ import {
   verifyAccessCode,
   type CodePurpose,
 } from "@/lib/api";
+import { landingPath } from "@/lib/access";
 
 const DOMAIN = "essentiallysports.com";
 const RESEND_AFTER_SECONDS = 30;
@@ -93,8 +94,8 @@ function SignupFlow() {
     }
     setLoading(true);
     try {
-      await setAccountPassword(email.trim(), setupToken, password);
-      router.push("/dashboard");
+      const { role } = await setAccountPassword(email.trim(), setupToken, password);
+      router.push(landingPath(role));
       router.refresh();
     } catch (err) {
       setError(errorMessage(err, "Could not save your password. Start again."));

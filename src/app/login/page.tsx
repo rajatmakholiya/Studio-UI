@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/api";
+import { landingPath } from "@/lib/access";
 import { Lock, Mail, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -19,8 +20,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await loginUser(email, password);
-      router.push("/dashboard");
+      const { role } = await loginUser(email, password);
+      router.push(landingPath(role));
       router.refresh();
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid credentials. Please try again.");
