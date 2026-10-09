@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import type { WriterStats } from "../types";
-import { csvHours, csvNum, fmtDec, fmtHours, fmtInt, fmtPct, rateTone, AGE_TONE_CLASS } from "../format";
+import { csvNum, fmtDec, fmtInt, fmtPct, rateTone, AGE_TONE_CLASS } from "../format";
 import { useTableSort, SortableTh } from "@/components/ui/SortableTable";
 import ExportCsvButton from "@/components/ui/ExportCsvButton";
 import type { CsvColumn } from "@/lib/csv";
@@ -26,8 +26,9 @@ const CSV_COLUMNS: (CsvColumn<WriterStats> & { sendBack?: boolean })[] = [
   { header: "Published", value: (r) => r.published },
   { header: "Sent Back", value: (r) => r.sentBack, sendBack: true },
   { header: "Send-Back Rate (%)", value: (r) => csvNum(r.sendBackRate), sendBack: true },
-  { header: "Median TAT (h)", value: (r) => csvHours(r.medianTatHours) },
-  { header: "Avg TAT (h)", value: (r) => csvHours(r.avgTatHours) },
+  // Temporarily hidden:
+  // { header: "Median TAT (h)", value: (r) => csvHours(r.medianTatHours) },
+  // { header: "Avg TAT (h)", value: (r) => csvHours(r.avgTatHours) },
   { header: "Days Worked", value: (r) => r.activeDays },
   { header: "Avg Submitted per Day Worked", value: (r) => csvNum(r.perActiveDay, 2) },
   { header: "In Queue", value: (r) => r.pending },
@@ -71,7 +72,7 @@ export default function WritersTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className={`w-full ${showSendBacks ? "min-w-[1120px]" : "min-w-[980px]"} text-xs`}>
+        <table className={`w-full ${showSendBacks ? "min-w-[980px]" : "min-w-[840px]"} text-xs`}>
           <thead className="text-gray-400 dark:text-gray-500">
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <SortableTh label="Writer" colKey="writer" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -85,8 +86,10 @@ export default function WritersTable({
                   <SortableTh label="SB Rate" colKey="sendBackRate" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 </>
               )}
+              {/* Temporarily hidden:
               <SortableTh label="Med TAT" colKey="medianTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="Avg TAT" colKey="avgTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              */}
               <SortableTh label="Days Worked" colKey="activeDays" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="Avg / Day" colKey="perActiveDay" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="In Queue" colKey="pending" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -114,8 +117,10 @@ export default function WritersTable({
                     </td>
                   </>
                 )}
+                {/* Temporarily hidden:
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtHours(r.medianTatHours)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtHours(r.avgTatHours)}</td>
+                */}
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtInt(r.activeDays)}</td>
                 <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-900 dark:text-white">{fmtDec(r.perActiveDay, 2)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{fmtInt(r.pending)}</td>
@@ -123,7 +128,7 @@ export default function WritersTable({
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={showSendBacks ? 12 : 10} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={showSendBacks ? 10 : 8} className="px-3 py-8 text-center text-gray-400">
                   No writer activity in this period
                 </td>
               </tr>

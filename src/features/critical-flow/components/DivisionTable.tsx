@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import type { DivisionStats } from "../types";
-import { csvHours, csvNum, fmtHours, fmtInt, fmtPct, rateTone, AGE_TONE_CLASS } from "../format";
+import { csvNum, fmtInt, fmtPct, rateTone, AGE_TONE_CLASS } from "../format";
 import { useTableSort, SortableTh } from "@/components/ui/SortableTable";
 import ExportCsvButton from "@/components/ui/ExportCsvButton";
 import type { CsvColumn } from "@/lib/csv";
@@ -25,8 +25,9 @@ const CSV_COLUMNS: (CsvColumn<DivisionStats> & { sendBack?: boolean })[] = [
   { header: "Publish Rate (%)", value: (r) => csvNum(r.publishRate) },
   { header: "Sent Back", value: (r) => r.sentBack, sendBack: true },
   { header: "In Queue", value: (r) => r.pending },
-  { header: "Median TAT (h)", value: (r) => csvHours(r.medianTatHours) },
-  { header: "Avg TAT (h)", value: (r) => csvHours(r.avgTatHours) },
+  // Temporarily hidden:
+  // { header: "Median TAT (h)", value: (r) => csvHours(r.medianTatHours) },
+  // { header: "Avg TAT (h)", value: (r) => csvHours(r.avgTatHours) },
   { header: "Writers", value: (r) => r.writers },
   { header: "Editors", value: (r) => r.editors },
 ];
@@ -69,7 +70,7 @@ export default function DivisionTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className={`w-full ${showSendBacks ? "min-w-[860px]" : "min-w-[790px]"} text-xs`}>
+        <table className={`w-full ${showSendBacks ? "min-w-[720px]" : "min-w-[650px]"} text-xs`}>
           <thead className="text-gray-400 dark:text-gray-500">
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <SortableTh label="Division" colKey="division" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -80,8 +81,10 @@ export default function DivisionTable({
                 <SortableTh label="Sent Back" colKey="sentBack" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               )}
               <SortableTh label="In Queue" colKey="pending" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              {/* Temporarily hidden:
               <SortableTh label="Med TAT" colKey="medianTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               <SortableTh label="Avg TAT" colKey="avgTatHours" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              */}
               <SortableTh label="People" colKey="writers" align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
@@ -117,12 +120,14 @@ export default function DivisionTable({
                   <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
                     {fmtInt(r.pending)}
                   </td>
+                  {/* Temporarily hidden:
                   <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
                     {fmtHours(r.medianTatHours)}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
                     {fmtHours(r.avgTatHours)}
                   </td>
+                  */}
                   <td className="px-3 py-2 text-right tabular-nums text-gray-500 dark:text-gray-400">
                     {r.writers}w / {r.editors}e
                   </td>
@@ -131,7 +136,7 @@ export default function DivisionTable({
             })}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={showSendBacks ? 9 : 8} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={showSendBacks ? 7 : 6} className="px-3 py-8 text-center text-gray-400">
                   No pieces in this period
                 </td>
               </tr>
