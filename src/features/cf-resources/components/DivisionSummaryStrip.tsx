@@ -162,9 +162,16 @@ export default function DivisionSummaryStrip({ data, isLoading, selectedDivision
     <div>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          <span className="font-semibold text-gray-900 dark:text-white">{fmtInt(t.submitted)}</span> submitted of{" "}
-          <span className="font-semibold text-gray-900 dark:text-white">{fmtInt(t.quota)}</span> today ·{" "}
-          {fmtInt(t.gapDay)} to go · {fmtInt(t.yahooPublished)} published on Yahoo ·{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">{fmtInt(t.submitted)}</span> submitted
+          {t.quota > 0 ? (
+            <>
+              {" "}of <span className="font-semibold text-gray-900 dark:text-white">{fmtInt(t.quota)}</span> today ·{" "}
+              {fmtInt(t.gapDay)} to go
+            </>
+          ) : (
+            " today"
+          )}{" "}
+          · {fmtInt(t.yahooPublished)} published on Yahoo ·{" "}
           {fmtInt(t.awaitingEditorial)} waiting for an editor
         </p>
         <p className="text-[11px] text-gray-500 dark:text-gray-400">

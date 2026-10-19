@@ -25,11 +25,13 @@ export default function ScheduleHealthCard({ data, isLoading }: Props) {
       <div className="flex items-baseline justify-between">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
           <FileWarning size={14} className="text-amber-500" />
-          Schedule Sheet Health
+          Team Structure Health
         </h2>
         <span className="text-[11px] text-gray-400">
           {data.sheetConfigured
-            ? `${data.people} people · ${data.leaves} leave records · ${data.quotas} quota rows`
+            ? [`${data.people} people`, data.leaves && `${data.leaves} leave records`, data.quotas && `${data.quotas} quota rows`]
+                .filter(Boolean)
+                .join(" · ")
             : "resources sheet not configured"}
         </span>
       </div>
@@ -41,7 +43,7 @@ export default function ScheduleHealthCard({ data, isLoading }: Props) {
       )}
       {empty && (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-          No people synced yet. The n8n Critical Flow workflow fills the People, Leaves and Quotas tabs from the Dynamic Schedule — check its Resources Log tab.
+          No people synced yet. The n8n Critical Flow workflow fills the People tab from Team Structure — check its Resources Log tab.
         </p>
       )}
       {data.syncError && (

@@ -284,7 +284,7 @@ export interface InsightsResult {
 }
 
 // ── Resources page ──
-// People come from the Dynamic Schedule; their work is counted across
+// People come from the Team Structure tab; their work is counted across
 // Critical Flow and Yahoo. Mirrors ES_Studio_API/src/modules/resources/types.ts.
 
 export type ResourceStatus =

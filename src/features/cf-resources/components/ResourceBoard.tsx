@@ -27,7 +27,14 @@ const STATUS_RANK: Record<string, number> = {
   Free: 0, Available: 1, "At capacity": 2, Busy: 3, Overloaded: 4, Off: 5,
 };
 
-const flagLabel = (f: string) => (f === "unlisted" ? "not on the schedule" : f.replace("-", " "));
+const FLAG_LABELS: Record<string, string> = {
+  unlisted: "not on Team Structure",
+  "duplicate-row": "listed twice",
+  "week-off-unclear": "week off unclear",
+  "off-desk": "outside CF/Yahoo",
+  "no-team": "no division",
+};
+const flagLabel = (f: string) => FLAG_LABELS[f] ?? f.replaceAll("-", " ");
 
 function csvColumns(date: string): CsvColumn<ResourcePerson>[] {
   const isEditor = (p: ResourcePerson) => p.roleGroup === "editor";
@@ -185,7 +192,7 @@ export default function ResourceBoard({ data, isLoading, onFindCover }: Props) {
                     )}
                     {(p.coveredBy || p.backup) && (
                       <span className="block truncate text-gray-400">
-                        {p.offToday ? "covered by " : "backup "}
+                        {p.offToday ? "covered by " : p.backup.includes(",") ? "backups " : "backup "}
                         <span className="text-gray-600 dark:text-gray-300">{p.coveredBy || p.backup}</span>
                       </span>
                     )}
