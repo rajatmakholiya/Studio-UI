@@ -5,9 +5,21 @@ import { fmtDay, fmtInt } from "@/features/critical-flow/format";
 import { useTableSort, SortableTh } from "@/components/ui/SortableTable";
 import ExportCsvButton from "@/components/ui/ExportCsvButton";
 import type { CsvColumn } from "@/lib/csv";
-import { MEASURES, type RoundupCounts, type RoundupDay, type RoundupSheet, type SheetRoundup } from "../types";
+import {
+  MEASURES,
+  type RoundupCounts,
+  type RoundupDay,
+  type RoundupSheet,
+  type RoundupSheetCounts,
+  type SheetRoundup,
+} from "../types";
 
 const card = "rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900";
+
+const SHEET_COLUMNS: { key: keyof RoundupSheetCounts; label: string }[] = [
+  ...MEASURES,
+  { key: "pendingEditor", label: "Pending editor" },
+];
 
 function MeasureCard({ label, hint, data, measure }: { label: string; hint: string; data: SheetRoundup; measure: keyof RoundupCounts }) {
   const yahoo = data.yahoo.totals[measure];
@@ -43,13 +55,13 @@ function SheetTable({
   sheetLabel: string;
   csv: string;
   rows: RoundupSheet[];
-  totals: RoundupCounts;
+  totals: RoundupSheetCounts;
 }) {
-  const getValue = useCallback((r: RoundupSheet, key: string) => (key === "sheet" ? r.sheet : r[key as keyof RoundupCounts]), []);
+  const getValue = useCallback((r: RoundupSheet, key: string) => (key === "sheet" ? r.sheet : r[key as keyof RoundupSheetCounts]), []);
   const { sorted, sortKey, sortDir, handleSort } = useTableSort(rows, getValue);
   const columns: CsvColumn<RoundupSheet>[] = [
     { header: sheetLabel, value: (r) => r.sheet },
-    ...MEASURES.map((m) => ({ header: m.label, value: (r: RoundupSheet) => r[m.key] })),
+    ...SHEET_COLUMNS.map((c) => ({ header: c.label, value: (r: RoundupSheet) => r[c.key] })),
   ];
 
   return (
@@ -66,8 +78,8 @@ function SheetTable({
           <thead className="text-gray-400 dark:text-gray-500">
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <SortableTh label={sheetLabel} colKey="sheet" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-              {MEASURES.map((m) => (
-                <SortableTh key={m.key} label={m.label} colKey={m.key} align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              {SHEET_COLUMNS.map((c) => (
+                <SortableTh key={c.key} label={c.label} colKey={c.key} align="right" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               ))}
             </tr>
           </thead>
@@ -75,16 +87,25 @@ function SheetTable({
             {sorted.map((r) => (
               <tr key={r.sheet} className="border-b border-gray-50 last:border-0 dark:border-gray-800/50">
                 <td className="px-3 py-1.5 font-medium text-gray-900 dark:text-white">{r.sheet}</td>
-                {MEASURES.map((m) => (
-                  <td key={m.key} className={`px-3 py-1.5 text-right tabular-nums ${r[m.key] ? "text-gray-700 dark:text-gray-300" : "text-gray-300 dark:text-gray-600"}`}>
-                    {fmtInt(r[m.key])}
+                {SHEET_COLUMNS.map((c) => (
+                  <td
+                    key={c.key}
+                    className={`px-3 py-1.5 text-right tabular-nums ${
+                      !r[c.key]
+                        ? "text-gray-300 dark:text-gray-600"
+                        : c.key === "pendingEditor"
+                          ? "font-medium text-amber-600 dark:text-amber-400"
+                          : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    {fmtInt(r[c.key])}
                   </td>
                 ))}
               </tr>
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-gray-400">No sheets synced yet</td>
+                <td colSpan={SHEET_COLUMNS.length + 1} className="px-3 py-8 text-center text-gray-400">No sheets synced yet</td>
               </tr>
             )}
           </tbody>
@@ -92,8 +113,8 @@ function SheetTable({
             <tfoot>
               <tr className="border-t border-gray-200 font-semibold text-gray-900 dark:border-gray-700 dark:text-white">
                 <td className="px-3 py-1.5">Total</td>
-                {MEASURES.map((m) => (
-                  <td key={m.key} className="px-3 py-1.5 text-right tabular-nums">{fmtInt(totals[m.key])}</td>
+                {SHEET_COLUMNS.map((c) => (
+                  <td key={c.key} className="px-3 py-1.5 text-right tabular-nums">{fmtInt(totals[c.key])}</td>
                 ))}
               </tr>
             </tfoot>
@@ -208,6 +229,7 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
         )}
         {" "}<strong>Written</strong> counts on the day it was submitted, <strong>edited</strong> on the day of its last editorial pass, and
         {" "}<strong>published</strong> on the sheet&apos;s publication date. Yahoo has one editorial pass, recorded at publishing, so its edited and published numbers run close.
+        {" "}<strong>Pending editor</strong> is what was written in the period and has not been through an editor yet, as of the last sync; scrapped and on-hold pieces are left out.
       </p>
 
       <div className="grid gap-4 md:grid-cols-3">

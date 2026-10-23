@@ -6,12 +6,17 @@ export interface RoundupCounts {
   published: number;
 }
 
-export interface RoundupSheet extends RoundupCounts {
+export interface RoundupSheetCounts extends RoundupCounts {
+  /** Written in the range and not yet through an editorial pass, as of the last sync. */
+  pendingEditor: number;
+}
+
+export interface RoundupSheet extends RoundupSheetCounts {
   sheet: string;
 }
 
 export interface RoundupSide {
-  totals: RoundupCounts;
+  totals: RoundupSheetCounts;
   /** One row per source sheet; for Yahoo, one per division on its single sheet. */
   sheets: RoundupSheet[];
 }
