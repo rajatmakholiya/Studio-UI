@@ -8,16 +8,22 @@ export type UserRole =
   | "sm_user"
   | "cf_manager"
   | "cf_user"
+  | "ahe_user"
   | "management"
   | "user";
 
-/** The two halves of the app a manager or user is confined to. */
-export type AppSection = "sm" | "cf";
+/**
+ * The parts of the app a manager or user is confined to. "roundup" is the
+ * Sheet Roundup on its own: Critical Flow roles have it alongside "cf", and
+ * AHE Users have only it.
+ */
+export type AppSection = "sm" | "cf" | "roundup";
 
 const RANK: Record<UserRole, number> = {
   user: 1,
   sm_user: 1,
   cf_user: 1,
+  ahe_user: 1,
   management: 2,
   sm_manager: 2,
   cf_manager: 2,
@@ -25,11 +31,12 @@ const RANK: Record<UserRole, number> = {
   superadmin: 4,
 };
 
-const SECTION: Partial<Record<UserRole, AppSection>> = {
-  sm_user: "sm",
-  sm_manager: "sm",
-  cf_user: "cf",
-  cf_manager: "cf",
+const SECTIONS: Partial<Record<UserRole, AppSection[]>> = {
+  sm_user: ["sm"],
+  sm_manager: ["sm"],
+  cf_user: ["cf", "roundup"],
+  cf_manager: ["cf", "roundup"],
+  ahe_user: ["roundup"],
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
@@ -39,6 +46,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   sm_user: "SM User",
   cf_manager: "CF Manager",
   cf_user: "CF User",
+  ahe_user: "AHE User",
   // Left over from before sections existed; the Access page can only move people off it.
   management: "Manager, no team",
   user: "No access yet",
@@ -51,6 +59,7 @@ export const ASSIGNABLE_ROLES: UserRole[] = [
   "sm_manager",
   "cf_user",
   "cf_manager",
+  "ahe_user",
   "admin",
 ];
 
@@ -64,7 +73,7 @@ export function hasRole(role: UserRole, min: UserRole): boolean {
 }
 
 export function inSection(role: UserRole, section: AppSection): boolean {
-  return hasRole(role, "admin") || SECTION[role] === section;
+  return hasRole(role, "admin") || !!SECTIONS[role]?.includes(section);
 }
 
 interface RouteRule {
@@ -89,6 +98,7 @@ const ROUTE_RULES: RouteRule[] = [
   { match: "/stable-production", section: "cf" },
   { match: "/cf-weekly-report", section: "cf" },
   { match: "/cf-resources", section: "cf" },
+  { match: "/sheet-roundup", section: "roundup" },
   { match: "/users", minRole: "superadmin" },
 ];
 
@@ -105,6 +115,7 @@ export function canView(role: UserRole, pathname: string): boolean {
 export function homeFor(role: UserRole): string | null {
   if (inSection(role, "sm")) return "/dashboard";
   if (inSection(role, "cf")) return "/critical-flow";
+  if (inSection(role, "roundup")) return "/sheet-roundup";
   return null;
 }
 

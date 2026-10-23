@@ -10,6 +10,7 @@ import { fmtAgo } from "@/features/critical-flow/format";
 
 const SM_CLASS = "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400";
 const CF_CLASS = "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400";
+const AHE_CLASS = "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400";
 const NO_ACCESS_CLASS = "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
 
 const ROLE_CLASS: Record<Role, string> = {
@@ -19,6 +20,7 @@ const ROLE_CLASS: Record<Role, string> = {
   sm_user: SM_CLASS,
   cf_manager: CF_CLASS,
   cf_user: CF_CLASS,
+  ahe_user: AHE_CLASS,
   management: NO_ACCESS_CLASS,
   user: NO_ACCESS_CLASS,
 };
@@ -27,6 +29,7 @@ const FILTERS: { key: string; label: string; roles: Role[] }[] = [
   { key: "admin", label: "Admins", roles: ["admin"] },
   { key: "sm", label: "Social Media", roles: ["sm_manager", "sm_user"] },
   { key: "cf", label: "Critical Flow", roles: ["cf_manager", "cf_user"] },
+  { key: "ahe", label: "AHE", roles: ["ahe_user"] },
   // The old team-less Manager opens no pages either, so it is counted here.
   { key: "none", label: "No access yet", roles: ["user", "management"] },
 ];
@@ -133,6 +136,7 @@ export default function UsersPage() {
           Everyone who signs up starts with no access, and sees no pages until given a role here.
           Social Media roles open the Dashboard, Web Traffic and Reports; an SM Manager also gets Revenue, connected accounts and email-report recipients.
           Critical Flow roles open every Critical Flow page; a CF Manager can also edit quotas.
+          An AHE User sees the Sheet Roundup and nothing else.
           Admins see everything and can run syncs. A change applies on the person&apos;s next page load.
         </p>
 

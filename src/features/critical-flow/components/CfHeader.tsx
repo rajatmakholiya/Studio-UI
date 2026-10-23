@@ -178,7 +178,7 @@ function DivisionDropdown({
 
 // ─── Custom date range ───────────────────────────────────────────────────────
 
-function CustomRange({
+export function CustomRange({
   active,
   start,
   end,

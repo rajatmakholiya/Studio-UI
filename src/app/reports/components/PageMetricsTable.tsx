@@ -22,6 +22,7 @@ import {
 import SportsMappingsModal from "./SportsMappingsModal";
 import { usePageLinks, toPageLinkPlatform } from "@/lib/page-links";
 import { PageNameLink } from "@/components/ui/PageNameLink";
+import { useRole } from "@/hooks/useRole";
 interface PageMetric {
   profileId: string;
   pageName: string;
@@ -142,6 +143,7 @@ export default function PageMetricsTable({
 }) {
   const queryClient = useQueryClient();
   const pageLinks = usePageLinks();
+  const { canAccess } = useRole();
   const [sortKey, setSortKey] = useState<SortKey>("impressions");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showMappingsModal, setShowMappingsModal] = useState(false);
@@ -334,7 +336,8 @@ export default function PageMetricsTable({
     });
   };
 
-  const showRevenue = activePlatform === "facebook";
+  // Earnings per page are for managers; SM Users get the table without them.
+  const showRevenue = activePlatform === "facebook" && canAccess("management");
 
   const columns: { key: SortKey; label: string; align?: "left" | "right" }[] = [
     { key: "pageName", label: "Page Name", align: "left" },

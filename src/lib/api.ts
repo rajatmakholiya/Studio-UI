@@ -984,6 +984,11 @@ export async function fetchCombinedProduction(params: Record<string, any>) {
   return res.data;
 }
 
+export async function fetchSheetRoundup(params: { startDate?: string; endDate?: string }) {
+  const res = await apiClient.get('/v1/production/roundup', { params: cfParams(params) });
+  return res.data;
+}
+
 export async function fetchYpSyncStatus() {
   return ypGet('sync-status');
 }
