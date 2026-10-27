@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { ExternalLink } from "lucide-react";
 import { fmtDay, fmtInt } from "@/features/critical-flow/format";
 import { useTableSort, SortableTh } from "@/components/ui/SortableTable";
 import ExportCsvButton from "@/components/ui/ExportCsvButton";
@@ -13,6 +14,7 @@ import {
   type RoundupSheetCounts,
   type SheetRoundup,
 } from "../types";
+import { nonYahooSource, yahooSource, type SourceSheet } from "../sources";
 
 const card = "rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900";
 
@@ -49,6 +51,7 @@ function SheetTable({
   csv,
   rows,
   totals,
+  source,
 }: {
   title: string;
   subtitle: string;
@@ -56,6 +59,8 @@ function SheetTable({
   csv: string;
   rows: RoundupSheet[];
   totals: RoundupSheetCounts;
+  /** The source workbook a row's pieces sit on, so its pending count can open it. */
+  source: (sheet: string) => SourceSheet | null;
 }) {
   const getValue = useCallback((r: RoundupSheet, key: string) => (key === "sheet" ? r.sheet : r[key as keyof RoundupSheetCounts]), []);
   const { sorted, sortKey, sortDir, handleSort } = useTableSort(rows, getValue);
@@ -87,20 +92,36 @@ function SheetTable({
             {sorted.map((r) => (
               <tr key={r.sheet} className="border-b border-gray-50 last:border-0 dark:border-gray-800/50">
                 <td className="px-3 py-1.5 font-medium text-gray-900 dark:text-white">{r.sheet}</td>
-                {SHEET_COLUMNS.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`px-3 py-1.5 text-right tabular-nums ${
-                      !r[c.key]
-                        ? "text-gray-300 dark:text-gray-600"
-                        : c.key === "pendingEditor"
-                          ? "font-medium text-amber-600 dark:text-amber-400"
-                          : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    {fmtInt(r[c.key])}
-                  </td>
-                ))}
+                {SHEET_COLUMNS.map((c) => {
+                  const src = c.key === "pendingEditor" && r[c.key] ? source(r.sheet) : null;
+                  return (
+                    <td
+                      key={c.key}
+                      className={`px-3 py-1.5 text-right tabular-nums ${
+                        !r[c.key]
+                          ? "text-gray-300 dark:text-gray-600"
+                          : c.key === "pendingEditor"
+                            ? "font-medium text-amber-600 dark:text-amber-400"
+                            : "text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {src ? (
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group inline-flex items-center gap-1 hover:underline"
+                          title={`Open the ${src.name} source sheet`}
+                        >
+                          <ExternalLink size={11} className="opacity-50 group-hover:opacity-100" />
+                          {fmtInt(r[c.key])}
+                        </a>
+                      ) : (
+                        fmtInt(r[c.key])
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             {sorted.length === 0 && (
@@ -246,6 +267,7 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
           csv="yahoo"
           rows={data.yahoo.sheets}
           totals={data.yahoo.totals}
+          source={yahooSource}
         />
         <SheetTable
           title="Non-Yahoo"
@@ -254,6 +276,7 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
           csv="non-yahoo"
           rows={data.nonYahoo.sheets}
           totals={data.nonYahoo.totals}
+          source={nonYahooSource}
         />
       </div>
 
