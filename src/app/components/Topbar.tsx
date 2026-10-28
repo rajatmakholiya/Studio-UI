@@ -25,7 +25,7 @@ const PAGE_TITLES: { match: string; title: string; subtitle?: string }[] = [
   { match: '/users',            title: 'Access',                  subtitle: 'Who can use EssentiallyAnalytics, and at what level' },
   { match: '/settings',         title: 'Settings' },
   { match: '/debug',            title: 'Debug' },
-  { match: '/dashboard',        title: 'Dashboard Overview',      subtitle: 'Real-time performance across connected platforms' },
+  { match: '/dashboard',        title: 'Dashboard Overview',      subtitle: 'Who wrote and edited each article, and the social traffic it drew' },
 ];
 
 export default function Topbar() {

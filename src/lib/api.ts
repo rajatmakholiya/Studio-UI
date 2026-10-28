@@ -989,6 +989,11 @@ export async function fetchSheetRoundup(params: { startDate?: string; endDate?: 
   return res.data;
 }
 
+export async function fetchOverview(params: { startDate: string; endDate: string }) {
+  const res = await apiClient.get('/v1/overview', { params });
+  return res.data;
+}
+
 export async function fetchYpSyncStatus() {
   return ypGet('sync-status');
 }
