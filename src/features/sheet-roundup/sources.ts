@@ -3,7 +3,7 @@
  * open the sheet its pieces sit on. Mirrors the n8n configs; keep in step with
  * n8n/critical-flow/src/01-config.js (one workbook per division, named by the
  * division it syncs as) and n8n/yahoo/src/01-config.js (one workbook for every
- * Yahoo division).
+ * Yahoo division). BB News is read by the API itself (resources/bb-news.service.ts).
  */
 
 const CF_SHEETS: Record<string, string> = {
@@ -19,6 +19,7 @@ const CF_SHEETS: Record<string, string> = {
 };
 
 const YAHOO_SHEET = "1s11VcQecffsoSwwApejgFXNRwxtwPiHlQZ1TRUIn9as";
+const BB_NEWS_SHEET = "1uonCiv7IC0WasF1K9k-So6Fu9VKqsuVcCyjWV62fkPw";
 
 export interface SourceSheet {
   /** The workbook's name as the desk knows it. */
@@ -34,5 +35,8 @@ export const nonYahooSource = (division: string): SourceSheet | null => {
   return id ? { name: division.trim(), url: sheetUrl(id) } : null;
 };
 
-/** Every Yahoo row is a division on the one Yahoo workbook. */
-export const yahooSource = (): SourceSheet => ({ name: "Yahoo", url: sheetUrl(YAHOO_SHEET) });
+/** A Yahoo row is a division on the one Yahoo workbook, except BB News, which has its own. */
+export const yahooSource = (division: string): SourceSheet =>
+  division.trim() === "BB News"
+    ? { name: "BB News", url: sheetUrl(BB_NEWS_SHEET) }
+    : { name: "Yahoo", url: sheetUrl(YAHOO_SHEET) };

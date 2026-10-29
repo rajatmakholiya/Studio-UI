@@ -244,14 +244,26 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
   return (
     <div className="space-y-4">
       <p className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-2.5 text-[11px] leading-relaxed text-indigo-900 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-200">
-        <strong>Yahoo</strong> is every article on the Yahoo sheet; <strong>Non-Yahoo</strong> is the rest of the Critical Flow sheets.
+        <strong>Yahoo</strong> is every article on the Yahoo sheet and the BB News sheet; <strong>Non-Yahoo</strong> is the rest of the Critical Flow sheets.
         {data.notes.sharedWithYahoo > 0 && (
           <> {fmtInt(data.notes.sharedWithYahoo)} articles in this period are on a Critical Flow sheet and the Yahoo sheet, and are counted once, under Yahoo.</>
         )}
         {" "}<strong>Written</strong> counts on the day it was submitted, <strong>edited</strong> on the day of its last editorial pass, and
         {" "}<strong>published</strong> on the sheet&apos;s publication date. Yahoo has one editorial pass, recorded at publishing, so its edited and published numbers run close.
         {" "}<strong>Pending editor</strong> is what was written in the period and has not been through an editor yet, as of the last sync; scrapped and on-hold pieces are left out.
+        {" "}BB News counts as published on its WordPress live date, or where the sheet has none, on the day final verification marked it Completed.
       </p>
+
+      {data.notes.bbNews.error && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          {data.notes.bbNews.readAt ? (
+            <>The BB News sheet could not be re-read, so its numbers are as of {new Date(data.notes.bbNews.readAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.</>
+          ) : (
+            <>The BB News sheet could not be read, so it is missing from the Yahoo numbers.</>
+          )}{" "}
+          ({data.notes.bbNews.error})
+        </p>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <MeasureCard label="Written" hint="Submitted by the writer" data={data} measure="written" />
@@ -262,7 +274,7 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
       <div className="grid gap-4 xl:grid-cols-2">
         <SheetTable
           title="Yahoo"
-          subtitle="The Yahoo sheet, by the division on each row"
+          subtitle="The Yahoo sheet by the division on each row, and the BB News sheet"
           sheetLabel="Division"
           csv="yahoo"
           rows={data.yahoo.sheets}
