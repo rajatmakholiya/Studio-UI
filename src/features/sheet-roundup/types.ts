@@ -39,8 +39,11 @@ export interface SheetRoundup {
     sharedWithYahoo: number;
     /** Pieces no stamp places on a day, so outside every range. */
     undated: number;
-    /** The BB News workbook, read live: when it was last read, and why the latest read failed. */
-    bbNews: { readAt: string | null; error: string | null };
+    /**
+     * The BB News workbook, read live: when it was last read, and why the latest
+     * read failed. Absent from an API older than the BB News change.
+     */
+    bbNews?: { readAt: string | null; error: string | null };
   };
 }
 

@@ -241,6 +241,7 @@ function DayTable({ days }: { days: RoundupDay[] }) {
 }
 
 export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
+  const bbNews = data.notes.bbNews;
   return (
     <div className="space-y-4">
       <p className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-2.5 text-[11px] leading-relaxed text-indigo-900 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-200">
@@ -254,14 +255,14 @@ export default function SheetRoundupView({ data }: { data: SheetRoundup }) {
         {" "}BB News counts as published on its WordPress live date, or where the sheet has none, on the day final verification marked it Completed.
       </p>
 
-      {data.notes.bbNews.error && (
+      {bbNews?.error && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          {data.notes.bbNews.readAt ? (
-            <>The BB News sheet could not be re-read, so its numbers are as of {new Date(data.notes.bbNews.readAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.</>
+          {bbNews.readAt ? (
+            <>The BB News sheet could not be re-read, so its numbers are as of {new Date(bbNews.readAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.</>
           ) : (
             <>The BB News sheet could not be read, so it is missing from the Yahoo numbers.</>
           )}{" "}
-          ({data.notes.bbNews.error})
+          ({bbNews.error})
         </p>
       )}
 
